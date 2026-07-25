@@ -206,7 +206,6 @@ export default function Dashboard(){
         <input type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden"/>
       </label>
       <button onClick={downloadTemplate} className="px-3 py-1.5 rounded-lg text-sm font-semibold border" style={{color:C.navy,borderColor:C.navy}}>⬇ Tải dữ liệu</button>
-      <button onClick={resetData} className="px-3 py-1.5 rounded-lg text-sm font-semibold border" style={{color:C.red,borderColor:C.red}}>↺ Khôi phục</button>
     </div>
     {msg&&<div className="mb-3 text-sm px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">{msg}</div>}
     {!hasData&&<div className="mb-3 text-sm px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-800">Vùng này chưa có số liệu. Dùng <b>Tải dữ liệu</b> → điền số → <b>Cập nhật dữ liệu</b> để nạp.</div>}
