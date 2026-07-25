@@ -59,7 +59,12 @@ function VNMap({scope,setScope}){
 export default function Dashboard(){
   const [scope,setScope]=useState("Vùng Trung Bộ");
   const [channel,setChannel]=useState("tong");
-  const [store,setStore]=useState(()=>{const s={};Object.keys(SEED).forEach(k=>s[k]=SEED[k]);return s;});
+  const STORAGE_KEY="thodmx_store_v1";
+  const [store,setStore]=useState(()=>{
+    try{const saved=localStorage.getItem(STORAGE_KEY);if(saved){const o=JSON.parse(saved);if(o&&typeof o==="object")return o;}}catch(e){}
+    const s={};Object.keys(SEED).forEach(k=>s[k]=SEED[k]);return s;
+  });
+  const persist=(obj)=>{try{localStorage.setItem(STORAGE_KEY,JSON.stringify(obj));}catch(e){}};
   const [msg,setMsg]=useState("");
 
   const khoList=useMemo(()=> scope==="Toàn quốc"?ALLKHO:REGIONS[scope].map(o=>({vung:scope,ma:o.ma,kho:o.kho})),[scope]);
@@ -130,8 +135,8 @@ export default function Dashboard(){
           else { if(isNgoai)cur.dtN=vals; else cur.dtT=vals; }
           next[name]=cur; upd++;
         });
-        setStore(next);
-        setMsg("✅ Đã cập nhật "+upd+" dòng"+(miss?(" · "+miss+" dòng không khớp kho"):"")+".");
+        setStore(next); persist(next);
+        setMsg("✅ Đã cập nhật "+upd+" dòng"+(miss?(" · "+miss+" dòng không khớp kho"):"")+". Dữ liệu đã được lưu, lần sau mở vẫn còn.");
       }catch(err){ setMsg("❌ Lỗi đọc file: "+err.message); }
     };
     rd.readAsArrayBuffer(file); e.target.value="";
@@ -150,6 +155,7 @@ export default function Dashboard(){
     const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"CapNhat");
     XLSX.writeFile(wb,"Template_CapNhat_DuLieu.xlsx");
   };
+  const resetData=()=>{try{localStorage.removeItem(STORAGE_KEY);}catch(e){}const s={};Object.keys(SEED).forEach(k=>s[k]=SEED[k]);setStore(s);setMsg("↺ Đã khôi phục dữ liệu mặc định (chỉ Vùng Trung Bộ).");};
 
   return (<div style={{maxWidth:1280,margin:"0 auto"}}>
     {/* HEADER */}
@@ -184,6 +190,7 @@ export default function Dashboard(){
         <input type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden"/>
       </label>
       <button onClick={downloadTemplate} className="px-3 py-1.5 rounded-lg text-sm font-semibold border" style={{color:C.navy,borderColor:C.navy}}>⬇ Tải dữ liệu</button>
+      <button onClick={resetData} className="px-3 py-1.5 rounded-lg text-sm font-semibold border" style={{color:C.red,borderColor:C.red}}>↺ Khôi phục</button>
     </div>
     {msg&&<div className="mb-3 text-sm px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">{msg}</div>}
     {!hasData&&<div className="mb-3 text-sm px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-800">Vùng này chưa có số liệu. Dùng <b>Tải dữ liệu</b> → điền số → <b>Cập nhật dữ liệu</b> để nạp.</div>}
