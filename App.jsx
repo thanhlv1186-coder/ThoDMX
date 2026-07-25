@@ -1,4 +1,4 @@
-import React,{useState,useMemo} from 'react';
+import React,{useState,useMemo,useEffect} from 'react';
 import {BarChart,Bar,LineChart,Line,AreaChart,Area,PieChart,Pie,Cell,ComposedChart,XAxis,YAxis,CartesianGrid,Tooltip,Legend,ResponsiveContainer,ReferenceLine,LabelList} from 'recharts';
 import * as XLSX from 'xlsx';
 import {LOGO,MAPIMG,REGIONS,SEED} from './data.js';
@@ -66,6 +66,11 @@ export default function Dashboard(){
   });
   const persist=(obj)=>{try{localStorage.setItem(STORAGE_KEY,JSON.stringify(obj));}catch(e){}};
   const [msg,setMsg]=useState("");
+  useEffect(()=>{
+    fetch('/api/data').then(r=>r.json()).then(d=>{
+      if(d&&d.store&&Object.keys(d.store).length){ setStore(prev=>({...prev,...d.store})); }
+    }).catch(()=>{});
+  },[]);
 
   const khoList=useMemo(()=> scope==="Toàn quốc"?ALLKHO:REGIONS[scope].map(o=>({vung:scope,ma:o.ma,kho:o.kho})),[scope]);
   const get=(name)=>store[name]||zeros();
@@ -136,7 +141,18 @@ export default function Dashboard(){
           next[name]=cur; upd++;
         });
         setStore(next); persist(next);
-        setMsg("✅ Đã cập nhật "+upd+" dòng"+(miss?(" · "+miss+" dòng không khớp kho"):"")+". Dữ liệu đã được lưu, lần sau mở vẫn còn.");
+        const base="✅ Đã cập nhật "+upd+" dòng"+(miss?(" · "+miss+" dòng không khớp kho"):"")+". ";
+        const trySave=(key)=>fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({store:next,key})}).then(r=>r.json());
+        setMsg(base+"Đang lưu lên GitHub…");
+        const wkey=localStorage.getItem('thodmx_wkey')||'';
+        trySave(wkey).then(rs=>{
+          if(rs&&rs.ok){ setMsg(base+"Đã lưu lên GitHub — mọi máy sẽ thấy sau khi tải lại."); }
+          else if(rs&&/mật khẩu|password|401/i.test(String(rs.error||''))){
+            const k=window.prompt('Nhập mật khẩu lưu dữ liệu (WRITE_KEY đã đặt trong Vercel):')||'';
+            if(k){ localStorage.setItem('thodmx_wkey',k); trySave(k).then(r2=>setMsg(base+((r2&&r2.ok)?"Đã lưu lên GitHub — mọi máy sẽ thấy.":"⚠️ Lưu server lỗi: "+((r2&&r2.error)||'')))); }
+            else { setMsg(base+"Chỉ lưu tạm trên máy này (chưa nhập mật khẩu)."); }
+          } else { setMsg(base+"⚠️ Chỉ lưu tạm trên máy này. Server: "+((rs&&rs.error)||'chưa cấu hình')); }
+        }).catch(()=>setMsg(base+"⚠️ Chỉ lưu tạm trên máy này (không gọi được server)."));
       }catch(err){ setMsg("❌ Lỗi đọc file: "+err.message); }
     };
     rd.readAsArrayBuffer(file); e.target.value="";
